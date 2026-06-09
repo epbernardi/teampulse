@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TeamPulse Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --citi-ink:#07001F; --citi-ink-mid:#0D1530; --citi-ink-light:#111D30;
+  --citi-border:#1E2D5A; --citi-blue:#2551E3; --citi-red:#FF3C28;
+  --color-volume:#FFFFFF; --color-qc:#108981; --color-sla:#F5A623;
+  --color-maker:#06B6D4; --color-checker:#885CF6;
+  --bg:var(--citi-ink); --surface:var(--citi-ink-mid); --surface2:var(--citi-ink-light);
+  --border:var(--citi-border); --accent:var(--citi-blue);
+  --blue:var(--color-maker); --purple:var(--color-checker);
+  --amber:var(--color-sla); --green:var(--color-qc);
+  --text:#EBEDF8; --muted:#5A6A9A; --muted2:#7A8BB8;
+  --tm1:var(--citi-blue); --tm2:var(--citi-red);
+  --num-font:'Inter',sans-serif;
+}
+html,body{min-height:100vh;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 55% 35% at 10% 5%,rgba(37,81,227,0.09) 0%,transparent 65%),
+             radial-gradient(ellipse 40% 40% at 90% 90%,rgba(16,185,129,0.05) 0%,transparent 65%);
+  pointer-events:none;z-index:0;}
+.wrapper{position:relative;z-index:1;}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 36px;border-bottom:1px solid var(--border);background:rgba(7,13,31,0.97);backdrop-filter:blur(16px);position:sticky;top:0;z-index:200;gap:20px;flex-wrap:wrap;}
+.logo span{color:var(--text);}
+.logo span b{color:var(--citi-blue);}
+nav.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px;}
+nav.tabs button{background:transparent;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:0.67rem;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border-radius:4px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+nav.tabs button.active{background:var(--citi-blue);color:#fff;font-weight:600;}
+nav.tabs button:not(.active):hover{color:var(--text);background:var(--surface2);}
+
+/* PERIOD FILTER */
+.period-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.mode-toggle{display:flex;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px;}
+.mode-btn{background:transparent;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:0.63rem;letter-spacing:0.1em;text-transform:uppercase;padding:5px 12px;border-radius:4px;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+.mode-btn.active{background:var(--citi-blue);color:#fff;font-weight:600;}
+.mode-btn:not(.active):hover{color:var(--text);background:var(--surface);}
+.filter-controls{display:flex;align-items:center;gap:6px;}
+.filter-group{display:flex;align-items:center;gap:5px;}
+.filter-group label{font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+.filter-group select,.filter-group input{background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:0.71rem;outline:none;cursor:pointer;}
+.filter-sep{font-size:0.65rem;color:var(--muted);padding:0 2px;}
+.filter-divider{width:1px;height:14px;background:var(--border);}
+
+/* PERIOD BANNER */
+.period-banner{display:flex;align-items:center;gap:8px;padding:7px 36px;background:rgba(37,81,227,0.07);border-bottom:1px solid rgba(37,81,227,0.15);font-size:0.63rem;color:var(--muted2);letter-spacing:0.06em;}
+.period-banner-dot{width:5px;height:5px;border-radius:50%;background:var(--citi-blue);flex-shrink:0;}
+.period-banner strong{color:var(--citi-blue);font-weight:600;}
+
+/* PAGES */
+.page{display:none;padding:20px 36px;max-width:1440px;margin:0 auto;}
+.page.active{display:block;}
+.section-label{font-family:'Inter',sans-serif;font-size:0.57rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+
+/* ROW / COL */
+.row{display:flex;gap:14px;margin-bottom:14px;}
+.col{flex:1;min-width:0;}
+.divider{height:1px;background:var(--border);margin:22px 0;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.4s ease both;}
+.card:hover{border-color:rgba(37,81,227,0.35);}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;}
+.card-title{font-family:'Inter',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.cdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.cdot-green{background:var(--green);} .cdot-blue{background:var(--citi-blue);} .cdot-amber{background:var(--amber);} .cdot-purple{background:var(--purple);} .cdot-tm1{background:var(--tm1);} .cdot-tm2{background:var(--tm2);}
+
+/* MEMBER BAR */
+.member-bar{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+.avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--num-font);font-weight:800;font-size:0.88rem;color:#fff;flex-shrink:0;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.3s ease 0.05s both;}
+.member-name{font-family:'Inter',sans-serif;font-weight:800;font-size:1rem;color:#fff;flex-shrink:0;}
+.member-sub{font-size:0.6rem;color:var(--muted2);margin-top:2px;}
+.member-bar select{margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:0.74rem;outline:none;cursor:pointer;padding:7px 13px;border-radius:6px;transition:border-color 0.2s;}
+.member-bar select:hover{border-color:var(--citi-blue);}
+
+/* S-PILLS */
+.s-pill{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;}
+.s-pill .val{font-family:var(--num-font);font-weight:800;font-size:1.8rem;line-height:1;color:var(--color-volume);}
+.s-pill-top{display:flex;align-items:items-start;justify-content:space-between;margin-bottom:10px;}
+.s-pill-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.s-pill-stat{display:flex;flex-direction:column;gap:5px;padding-top:0px;}
+.s-pill-stat-label{font-size:0.58rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.s-pill-stat-val{font-family:var(--num-font);font-size:0.82rem;font-weight:700;}
+.stat-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;}
+.stat-dot-green{background:var(--green);} .stat-dot-amber{background:var(--amber);}
+
+/* TAGS */
+.tag{display:inline-block;font-size:0.56rem;letter-spacing:0.07em;text-transform:uppercase;padding:2px 6px;border-radius:4px;font-weight:600;}
+.tag-ubt{background:rgba(6,182,212,0.12);color:var(--color-maker);border:1px solid rgba(6,182,212,0.25);}
+.tag-parent{background:rgba(139,92,246,0.12);color:var(--color-checker);border:1px solid rgba(139,92,246,0.25);}
+
+/* BREAKDOWN */
+.breakdown-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.breakdown-col{padding:0 38px;position:relative;}
+.breakdown-col:first-child{padding-left:0;}
+.breakdown-col:not(:last-child)::after{content:'';position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--border);}
+.bc-title{font-size:0.57rem;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.bc-title.maker{color:var(--color-maker);} .bc-title.checker{color:var(--color-checker);}
+.bc-big{font-family:var(--num-font);font-size:1.9rem;line-height:1;margin-bottom:12px;}
+.sub-breakdown{display:flex;flex-direction:column;gap:7px;}
+.sub-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 11px;}
+.sub-row-label{font-size:0.6rem;letter-spacing:0.09em;text-transform:uppercase;display:flex;align-items:center;gap:5px;color:var(--muted2);}
+.sub-row-val{font-family:var(--num-font);font-size:0.82rem;}
+.sub-dot{width:4px;height:4px;border-radius:50%;} .sub-dot-ubt{background:var(--color-maker);} .sub-dot-parent{background:var(--color-checker);} .sub-dot-blue{background:var(--color-maker);} .sub-dot-purple{background:var(--color-checker);}
+
+/* MONTHLY TABLE */
+.monthly-table{width:100%;border-collapse:collapse;font-size:0.74rem;}
+.monthly-table thead tr{border-bottom:1px solid var(--border);}
+.monthly-table th{padding:6px 9px;text-align:left;font-size:0.57rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted);font-weight:500;}
+.monthly-table th:not(:first-child){text-align:right;}
+.monthly-table td{padding:7px 9px;border-bottom:1px solid rgba(30,45,90,0.6);vertical-align:middle;}
+.monthly-table tbody tr:last-child td{border-bottom:none;}
+.monthly-table tbody tr:hover td{background:rgba(255,255,255,0.025);}
+.total-row td{color:var(--muted2);font-size:0.71rem;}
+.total-row{border-top:1px solid var(--border)!important;border-bottom:none!important;padding-top:9px;}
+.mm-accent{color:var(--color-qc);font-weight:600;}
+.num-blue{color:var(--color-maker);font-weight:600;}
+.num-purple{color:var(--color-checker);font-weight:600;}
+.num-muted{color:var(--muted);}
+.num-amber{color:var(--color-sla);font-weight:600;}
+.num-tm1{color:var(--tm1);font-weight:600;}
+.num-tm2{color:var(--tm2);font-weight:600;}
+
+/* METRIC SECTION HEADER */
+.metric-section-header{display:flex;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px;}
+.metric-badge{font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;padding:4px 8px;border-radius:20px;border:1px solid;}
+.sb-green{color:var(--color-qc);background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);}
+.sb-blue{color:var(--color-maker);background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.3);}
+.sb-purple{color:var(--color-checker);background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.3);}
+.sb-amber{color:var(--color-sla);background:rgba(245,166,35,0.1);border-color:rgba(245,166,35,0.3);}
+
+/* RADAR */
+.radar-wrap{position:relative;height:210px;}
+
+/* SELECTOR BAR (H2H) */
+.selector-bar{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:20px;animation:fadeUp 0.3s ease both;}
+.tm-selector{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:12px;}
+.tm-selector.tm1{border-color:rgba(37,81,227,0.3);}
+.tm-selector.tm2{border-color:rgba(255,60,35,0.3);}
+.tm-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--num-font);font-weight:800;font-size:0.95rem;color:#fff;flex-shrink:0;}
+.tm-name{font-family:'Inter',sans-serif;font-weight:800;font-size:0.72rem;color:#fff;}
+.tm-sub{font-size:0.55rem;color:var(--muted2);margin-top:1px;}
+.vs-badge{display:flex;align-items:center;justify-content:center;font-family:var(--num-font);font-weight:700;font-size:0.95rem;color:var(--muted);}
+.win-badge{font-size:0.55rem;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;}
+.win-badge.tm1{background:rgba(37,81,227,0.15);border:1px solid rgba(37,81,227,0.3);}
+.win-badge.tm2{background:rgba(255,60,35,0.1);border:1px solid rgba(255,60,35,0.25);}
+
+/* SUMMARY TABLE (H2H) */
+.summary-table{width:100%;border-collapse:collapse;}
+.summary-table thead tr{border-bottom:1px solid var(--border);}
+.summary-table th{padding:7px 10px;font-size:0.56rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted);font-weight:500;}
+.summary-table th.tm1-col{color:rgba(37,81,227,0.8);}
+.summary-table th.tm2-col{color:rgba(255,60,35,0.8);}
+.summary-table th:not(:first-child){text-align:right;}
+.summary-table tbody tr{border-bottom:1px solid rgba(30,45,90,0.5);vertical-align:middle;font-size:0.76rem;}
+.summary-table tbody tr:hover td{background:rgba(255,255,255,0.025);}
+.metric-name{font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:600;display:flex;align-items:center;gap:7px;}
+.metric-dot{width:5px;height:5px;border-radius:50%;}
+.md-green{background:var(--green);} .md-blue{background:var(--color-maker);} .md-purple{background:var(--color-checker);} .md-amber{background:var(--amber);}
+.val-cell{text-align:right;}
+.main-val{font-family:var(--num-font);font-weight:700;font-size:0.9rem;}
+.winner-tm1 .main-val{color:var(--tm1);}
+.winner-tm2 .main-val{color:var(--tm2);}
+.neutral .main-val{color:var(--muted2);}
+.divider-col{width:1px;padding:0;background:var(--border);}
+.qc-score{font-family:var(--num-font);font-size:0.82rem;font-weight:600;}
+
+/* METRIC TABS */
+.metric-tabs{display:flex;gap:4px;margin-bottom:14px;}
+.metric-tab{background:transparent;border:1px solid var(--border);color:var(--muted2);font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all 0.18s;}
+.metric-tab.active,.metric-tab:hover{background:rgba(37,81,227,0.15);color:var(--citi-blue);border-color:var(--citi-blue);}
+.monthly-section-title{font-family:'Inter',sans-serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;background:var(--border);height:1px;}
+.monthly-section-title::after{content:'';flex:1;height:1px;}
+
+/* TEAM OVERVIEW */
+.team-header-bar{display:flex;align-items:flex-start;flex-direction:column;gap:4px;margin-bottom:24px;animation:fadeUp 0.3s ease both;}
+.team-header-title{font-family:'Inter',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:0.02em;}
+.team-header-sub{font-size:0.65rem;color:var(--muted);letter-spacing:0.02em;}
+.team-selector-wrap{display:flex;align-items:center;gap:8px;}
+.team-selector-label{font-size:0.57rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+.team-toggle{display:flex;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px;}
+.team-toggle-btn{background:transparent;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 20px;border-radius:6px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.team-toggle-btn.active{background:var(--citi-blue);color:#fff;}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px 20px;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.4s ease both;}
+.kpi-label{font-family:'Inter',sans-serif;font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;line-height:1.3;margin-bottom:10px;color:var(--color-volume);}
+.kpi-stats-row{display:flex;align-items:center;gap:14px;}
+.kpi-stat-item{display:flex;flex-direction:column;}
+.kpi-stat-val{font-family:var(--num-font);font-size:0.7rem;font-weight:700;}
+.kpi-stat-label{font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.kpi-stat-sep{width:1px;height:12px;background:var(--border);}
+
+/* CHARTS */
+.team-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.chart-wrap-bar,.chart-wrap-line{position:relative;height:220px;}
+
+/* RANKING */
+.ranking-table{width:100%;border-collapse:collapse;}
+.ranking-table thead tr{border-bottom:1px solid var(--border);}
+.ranking-table th{padding:8px 12px;font-size:0.56rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:left;}
+.ranking-table th:not(:first-child){text-align:right;}
+.ranking-table tbody tr{border-bottom:1px solid rgba(30,45,90,0.4);}
+.ranking-table tbody tr:last-child td{border-bottom:none;}
+.ranking-table tbody tr:hover td{background:rgba(255,255,255,0.025);}
+.ranking-table td{padding:10px 12px;vertical-align:middle;}
+.rank-num{font-family:var(--num-font);font-weight:700;font-size:0.9rem;color:var(--muted);width:28px;display:inline-block;text-align:center;}
+.rank-num.gold{color:#F5A623;} .rank-num.silver{color:#aabbcc;} .rank-num.bronze{color:#c48045;}
+.rank-starter{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--num-font);font-weight:800;font-size:0.65rem;color:#fff;flex-shrink:0;}
+.rank-name{font-family:'Inter',sans-serif;font-size:0.8rem;font-weight:700;}
+.rank-role{font-size:0.6rem;color:var(--muted2);margin-top:1px;}
+.rank-mini{height:4px;border-radius:2px;background:var(--border);overflow:hidden;}
+.rank-mini-fill{height:100%;border-radius:2px;width:2px;}
+.score-high{background:rgba(16,185,129,0.12);color:var(--color-qc);border:1px solid rgba(16,185,129,0.2);}
+.score-mid{background:rgba(6,182,212,0.12);color:var(--color-maker);border:1px solid rgba(6,182,212,0.2);}
+.score-low{background:rgba(245,166,35,0.12);color:var(--color-sla);border:1px solid rgba(245,166,35,0.25);}
+
+/* SPOTLIGHT */
+.spotlight-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.spotlight-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;animation:fadeUp 0.4s ease both;transition:border-color 0.2s,transform 0.2s;cursor:pointer;}
+.spotlight-card:hover{border-color:rgba(37,81,227,0.35);transform:translateY(-2px);}
+.spotlight-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.spotlight-name{font-family:'Inter',sans-serif;font-weight:800;font-size:0.78rem;color:#fff;flex-shrink:0;}
+.spotlight-role{font-size:0.55rem;color:var(--muted2);margin-top:1px;}
+.spotlight-metrics{display:grid;grid-template-columns:1fr 1fr;gap:1fr;gap:4px;margin-bottom:8px;}
+.spotlight-metric{background:var(--surface2);border-radius:6px;padding:7px 9px;}
+.spotlight-metric-label{font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1px;}
+.spotlight-metric-val{font-family:var(--num-font);font-weight:700;font-size:0.75rem;}
+.spotlight-qc{border-top:1px solid var(--border);padding-top:7px;}
+.spotlight-qc-label{font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1px;}
+.spotlight-qc-val{font-family:var(--num-font);font-weight:700;font-size:0.8rem;}
+
+/* EMPTY STATE */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;gap:8px;}
+.empty-state-icon{font-size:1.3rem;opacity:0.4;}
+
+/* SELECT STYLING */
+select optgroup{background:var(--citi-ink-mid);color:var(--text);}
+select option{background:var(--citi-ink-mid);color:var(--text);font-family:'DM Mono',monospace;font-size:0.71rem;text-transform:uppercase;}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.d1{animation-delay:0.04s;} .d2{animation-delay:0.12s;} .d3{animation-delay:0.2s;} .d4{animation-delay:0.28s;} .d5{animation-delay:0.34s;} .d6{animation-delay:0.28s;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<header>
+  <div class="logo"><span style="font-family:'Inter',sans-serif;font-size:1.3rem;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#fff;">TEAM<span style="color:var(--citi-blue);">PULSE</span></span></div>
+  <nav class="tabs">
+    <button class="active" onclick="switchTab('member',this)">Member Profile</button>
+    <button onclick="switchTab('h2h',this)">Head-to-Head</button>
+    <button onclick="switchTab('team',this)">Team Overview</button>
+  </nav>
+  <div class="period-filter">
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="setMode('year',this)">Ano</button>
+      <button class="mode-btn" onclick="setMode('month',this)">Mês</button>
+      <button class="mode-btn" onclick="setMode('range',this)">Período</button>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-controls" id="filterControls"></div>
+  </div>
+</header>
+
+<div class="period-banner">
+  <span class="period-banner-dot"></span>
+  <span>Exibindo dados de <strong id="periodLabel">—</strong></span>
+</div>
+
+<!-- PAGE 1 - MEMBER PROFILE -->
+<div id="page-member" class="page active">
+  <div class="section-label">Team Member</div>
+  <div class="member-bar">
+    <div class="avatar" id="member-avatar" style="background:linear-gradient(135deg,#2551E3,#8969B4);">—</div>
+    <div>
+      <div class="member-name" id="member-name"></div>
+      <div class="member-sub" id="member-sub"></div>
+    </div>
+    <select id="member-select" onchange="switchMember(this.value)"></select>
+  </div>
+
+  <div class="row d1">
+    <div class="col" style="max-width:280px;">
+      <div class="card" style="height:100%;">
+        <div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Performance Radar</div></div>
+        <div class="radar-wrap"><canvas id="radarMember"></canvas></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="height:100%;">
+        <div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>All Metrics — Summary</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 2px 14px;">
+          <!-- Disbursements pill -->
+          <div class="s-pill">
+            <div style="font-size:2rem;font-family:var(--num-font);font-weight:800;color:var(--color-volume);line-height:1;margin-bottom:2px;" id="pill-Disbursements-total">0</div>
+            <div style="font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Disbursements</div>
+            <div style="display:flex;gap:5px;margin-bottom:10px;">
+              <span class="tag tag-ubt">M: <span id="pill-Disbursements-m">0</span></span>
+              <span class="tag tag-parent">C: <span id="pill-Disbursements-c">0</span></span>
+            </div>
+            <div style="height:1px;background:var(--border);margin-bottom:8px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:0.58rem;color:var(--muted2);">● Avg SLA</span>
+              <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:var(--color-sla);" id="pill-sla">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.58rem;color:var(--muted2);">● Avg QC</span>
+              <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:var(--color-qc);" id="pill-Disbursements-qc">—</span>
+            </div>
+          </div>
+          <!-- New Deals pill -->
+          <div class="s-pill">
+            <div style="font-size:2rem;font-family:var(--num-font);font-weight:800;color:var(--color-volume);line-height:1;margin-bottom:2px;" id="pill-live-total">0</div>
+            <div style="font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">New Deals</div>
+            <div style="display:flex;gap:5px;margin-bottom:10px;">
+              <span class="tag tag-ubt">M: <span id="pill-live-m">0</span></span>
+              <span class="tag tag-parent">C: <span id="pill-live-c">0</span></span>
+            </div>
+            <div style="height:1px;background:var(--border);margin-bottom:8px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.58rem;color:var(--muted2);">● Avg QC</span>
+              <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:var(--color-qc);" id="pill-live-qc">—</span>
+            </div>
+          </div>
+          <!-- Reviews pill -->
+          <div class="s-pill">
+            <div style="font-size:2rem;font-family:var(--num-font);font-weight:800;color:var(--color-volume);line-height:1;margin-bottom:2px;" id="pill-post-total">0</div>
+            <div style="font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Reviews</div>
+            <div style="display:flex;gap:5px;margin-bottom:10px;">
+              <span class="tag tag-ubt">M: <span id="pill-post-m">0</span></span>
+              <span class="tag tag-parent">C: <span id="pill-post-c">0</span></span>
+            </div>
+            <div style="height:1px;background:var(--border);margin-bottom:8px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.58rem;color:var(--muted2);">● Avg QC</span>
+              <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:var(--color-qc);" id="pill-post-qc">—</span>
+            </div>
+          </div>
+          <!-- Amendments pill -->
+          <div class="s-pill">
+            <div style="font-size:2rem;font-family:var(--num-font);font-weight:800;color:var(--color-volume);line-height:1;margin-bottom:2px;" id="pill-amend-total">0</div>
+            <div style="font-size:0.6rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Amendments</div>
+            <div style="display:flex;gap:5px;margin-bottom:10px;">
+              <span class="tag tag-ubt">M: <span id="pill-amend-m">0</span></span>
+              <span class="tag tag-parent">C: <span id="pill-amend-c">0</span></span>
+            </div>
+            <div style="height:1px;background:var(--border);margin-bottom:8px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:0.58rem;color:var(--muted2);">● Avg QC</span>
+              <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:var(--color-qc);" id="pill-amend-qc">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Disbursements breakdown -->
+  <div class="metric-section-header"><div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;">Disbursements</div><span class="metric-badge sb-green" id="badge-Disbursements" style="margin-left:8px;"> Deal Slips</span></div>
+  <div class="row d2"><div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Breakdown</div></div>
+    <div class="breakdown-grid">
+      <div class="breakdown-col"><div class="bc-title">Total</div><div class="bc-big" id="bd-Disbursements-total" style="color:var(--color-volume);"></div>
+        <div class="sub-breakdown">
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-ubt"></span>UBT Deals</span><span class="sub-row-val" id="bd-Disbursements-ubt" style="color:var(--color-maker);"></span></div>
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-parent"></span>Parent Deals</span><span class="sub-row-val" id="bd-Disbursements-par" style="color:var(--color-checker);"></span></div>
+        </div>
+      </div>
+      <div class="breakdown-col"><div class="bc-title maker">Maker</div><div class="bc-big" id="bd-Disbursements-maker" style="color:var(--color-maker);"></div>
+        <div class="sub-breakdown">
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-ubt"></span>UBT Deals</span><span class="sub-row-val" id="bd-Disbursements-maker-ubt" style="color:var(--color-maker);"></span></div>
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-parent"></span>Parent Deals</span><span class="sub-row-val" id="bd-Disbursements-maker-par" style="color:var(--color-checker);"></span></div>
+        </div>
+      </div>
+      <div class="breakdown-col"><div class="bc-title checker">Checker</div><div class="bc-big" id="bd-Disbursements-checker" style="color:var(--color-checker);"></div>
+        <div class="sub-breakdown">
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-ubt"></span>UBT Deals</span><span class="sub-row-val" id="bd-Disbursements-checker-ubt" style="color:var(--color-maker);"></span></div>
+          <div class="sub-row"><span class="sub-row-label"><span class="sub-dot sub-dot-parent"></span>Parent Deals</span><span class="sub-row-val" id="bd-Disbursements-checker-par" style="color:var(--color-checker);"></span></div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <div class="row d3">
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-blue"></span>Maker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>UBT Count</th><th>Avg SLA</th><th>Parent Count</th></tr></thead><tbody id="tbl-maker-Disbursements-body"></tbody></table></div></div>
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-purple"></span>Checker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>UBT Count</th><th>Avg QC Score</th><th>Parent Count</th></tr></thead><tbody id="tbl-checker-Disbursements-body"></tbody></table></div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- New Deals -->
+  <div class="metric-section-header"><div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;">New Deals</div><span class="metric-badge mb-blue" id="badge-live" style="margin-left:8px;"> Deal Slips</span></div>
+  <div class="row d4"><div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Breakdown</div></div>
+    <div class="breakdown-grid">
+      <div class="breakdown-col"><div class="bc-title">Total</div><div class="bc-big" id="bd-live-total" style="color:var(--color-volume);"></div></div>
+      <div class="breakdown-col"><div class="bc-title maker">Maker</div><div class="bc-big" id="bd-live-maker" style="color:var(--color-maker);"></div></div>
+      <div class="breakdown-col"><div class="bc-title checker">Checker</div><div class="bc-big" id="bd-live-checker" style="color:var(--color-checker);"></div></div>
+    </div>
+  </div></div></div>
+  <div class="row d5">
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-blue"></span>Maker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-maker-live-body"></tbody></table></div></div>
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-purple"></span>Checker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-checker-live-body"></tbody></table></div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Reviews -->
+  <div class="metric-section-header"><div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;">Reviews</div><span class="metric-badge sb-purple" id="badge-post" style="margin-left:8px;"> Deal Slips</span></div>
+  <div class="row d4"><div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Breakdown</div></div>
+    <div class="breakdown-grid">
+      <div class="breakdown-col"><div class="bc-title">Total</div><div class="bc-big" id="bd-post-total" style="color:var(--color-volume);"></div></div>
+      <div class="breakdown-col"><div class="bc-title maker">Maker</div><div class="bc-big" id="bd-post-maker" style="color:var(--color-maker);"></div></div>
+      <div class="breakdown-col"><div class="bc-title checker">Checker</div><div class="bc-big" id="bd-post-checker" style="color:var(--color-checker);"></div></div>
+    </div>
+  </div></div></div>
+  <div class="row d5">
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-blue"></span>Maker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-maker-post-body"></tbody></table></div></div>
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-purple"></span>Checker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-checker-post-body"></tbody></table></div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Amendments -->
+  <div class="metric-section-header"><div style="font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;">Amendments</div><span class="metric-badge sb-amber" id="badge-amend" style="margin-left:8px;"> Deal Slips</span></div>
+  <div class="row d6"><div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Breakdown</div></div>
+    <div class="breakdown-grid">
+      <div class="breakdown-col"><div class="bc-title">Total</div><div class="bc-big" id="bd-amend-total" style="color:var(--color-volume);"></div></div>
+      <div class="breakdown-col"><div class="bc-title maker">Maker</div><div class="bc-big" id="bd-amend-maker" style="color:var(--color-maker);"></div></div>
+      <div class="breakdown-col"><div class="bc-title checker">Checker</div><div class="bc-big" id="bd-amend-checker" style="color:var(--color-checker);"></div></div>
+    </div>
+  </div></div></div>
+  <div class="row d5">
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-blue"></span>Maker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-maker-amend-body"></tbody></table></div></div>
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-purple"></span>Checker — Monthly Breakdown</div></div><table class="monthly-table"><thead><tr><th>Month</th><th>Count</th><th>Avg QC Score</th></tr></thead><tbody id="tbl-checker-amend-body"></tbody></table></div></div>
+  </div>
+</div>
+
+<!-- PAGE 2 - HEAD TO HEAD -->
+<div id="page-h2h" class="page">
+  <div class="selector-bar">
+    <div class="tm-selector tm1">
+      <div class="tm-avatar" id="h2h-avatar1" style="background:linear-gradient(135deg,#2551E3,#06B6D4);">—</div>
+      <div class="tm-info" style="flex:1;min-width:0;">
+        <div class="tm-name" id="h2h-name1"></div>
+        <div class="tm-sub" id="h2h-sub1"></div>
+      </div>
+      <div style="position:relative;flex-shrink:0;">
+        <select id="h2h-select1" onchange="switchH2H()" style="appearance:none;background:var(--surface2);border:1px solid var(--citi-blue);color:var(--text);font-family:'DM Mono',monospace;font-size:0.72rem;padding:8px 32px 8px 14px;border-radius:8px;cursor:pointer;outline:none;min-width:160px;"></select>
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--citi-blue);pointer-events:none;font-size:10px;">▾</span>
+      </div>
+    </div>
+    <div class="vs-badge" style="font-size:1.1rem;font-weight:800;color:var(--muted2);padding:0 8px;">VS</div>
+    <div class="tm-selector tm2">
+      <div class="tm-avatar" id="h2h-avatar2" style="background:linear-gradient(135deg,#FF3C28,#F5A623);">—</div>
+      <div class="tm-info" style="flex:1;min-width:0;">
+        <div class="tm-name" id="h2h-name2"></div>
+        <div class="tm-sub" id="h2h-sub2"></div>
+      </div>
+      <div style="position:relative;flex-shrink:0;">
+        <select id="h2h-select2" onchange="switchH2H()" style="appearance:none;background:var(--surface2);border:1px solid var(--citi-red);color:var(--text);font-family:'DM Mono',monospace;font-size:0.72rem;padding:8px 32px 8px 14px;border-radius:8px;cursor:pointer;outline:none;min-width:160px;"></select>
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--citi-red);pointer-events:none;font-size:10px;">▾</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row d1">
+    <div class="col" style="max-width:300px;">
+      <div class="card" style="height:100%;">
+        <div class="card-head">
+          <div class="card-title"><span class="cdot cdot-green"></span>Radar Comparison</div>
+          <div style="display:flex;gap:10px;font-size:0.62rem;align-items:center;">
+            <span style="display:flex;align-items:center;gap:4px;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2551E3;"></span>
+              <span id="h2h-legend1" style="color:var(--muted2);">—</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:4px;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FF3C28;"></span>
+              <span id="h2h-legend2" style="color:var(--muted2);">—</span>
+            </span>
+          </div>
+        </div>
+        <div class="radar-wrap"><canvas id="radarH2H"></canvas></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="height:100%;">
+        <div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span>Metrics Summary</div></div>
+        <div id="h2h-summary-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="monthly-section-title">Monthly Detail</div>
+  <div class="metric-tabs">
+    <button class="metric-tab active" onclick="showH2HMetric('Disbursements',this)">Disbursements</button>
+    <button class="metric-tab" onclick="showH2HMetric('live',this)">New Deals</button>
+    <button class="metric-tab" onclick="showH2HMetric('post',this)">Reviews</button>
+    <button class="metric-tab" onclick="showH2HMetric('amend',this)">Amendments</button>
+  </div>
+  <div id="h2h-Disbursements"  class="row"></div>
+  <div id="h2h-live"  class="row" style="display:none;"></div>
+  <div id="h2h-post"  class="row" style="display:none;"></div>
+  <div id="h2h-amend" class="row" style="display:none;"></div>
+</div>
+
+<!-- PAGE 3 - TEAM OVERVIEW -->
+<div id="page-team" class="page">
+  <div class="team-header-bar d1">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;width:100%;">
+      <div><div class="team-header-title" id="teamOverviewTitle">TM — All Teams Overview</div><div class="team-header-sub">Compiled performance across all team members</div></div>
+      <div class="team-selector-wrap">
+        <span class="team-selector-label">Time</span>
+        <div class="team-toggle" id="teamToggle"></div>
+      </div>
+    </div>
+  </div>
+  <div class="kpi-strip d1" id="kpiStrip"></div>
+  <div class="team-charts-grid d2">
+    <div class="card">
+      <div class="card-head"><div class="card-title"><span class="cdot cdot-green"></span><span id="chartBarTitle">Disbursements por Membro</span></div><div style="font-size:0.6rem;color:var(--muted);">Maker vs Checker</div></div>
+      <div class="chart-wrap-bar"><canvas id="chartTeamBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title"><span class="cdot cdot-blue"></span><span id="chartLineTitle">Evolução Mensal — Disbursements</span></div><div style="font-size:0.6rem;color:var(--muted);" id="chartLineSub">Time completo</div></div>
+      <div class="chart-wrap-line"><canvas id="chartTeamLine"></canvas></div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="metric-section-header d3">
+    <div class="card-title" id="rankingTitle" style="font-size:0.8rem;font-family:'Inter',sans-serif;font-weight:700;">Ranking — Disbursements</div>
+    <div class="team-metric-tabs metric-tabs" style="margin-left:auto;">
+      <button class="metric-tab active" onclick="switchRankMetric('Disbursements',this)">Disbursements</button>
+      <button class="metric-tab" onclick="switchRankMetric('live',this)">New Deals</button>
+      <button class="metric-tab" onclick="switchRankMetric('post',this)">Reviews</button>
+      <button class="metric-tab" onclick="switchRankMetric('amend',this)">Amendments</button>
+    </div>
+  </div>
+  <div class="card d3" style="margin-bottom:14px;padding:0;overflow:hidden;">
+    <table class="ranking-table"><thead><tr><th style="width:40px;">#</th><th>Membro</th><th style="text-align:right;">Total</th><th style="text-align:right;">Maker</th><th style="text-align:right;">Checker</th><th style="text-align:right;">Avg QC</th><th style="text-align:right;">Avg SLA</th><th style="width:120px;"></th></tr></thead><tbody id="rankingBody"></tbody></table>
+  </div>
+  <div class="metric-section-header d4"><div class="card-title" style="font-size:0.8rem;font-family:'Inter',sans-serif;font-weight:700;">Member Spotlight</div><span class="metric-badge sb-green" id="spotlightBadge" style="margin-left:8px;"></span></div>
+  <div class="spotlight-grid d4" id="spotlightGrid"></div>
+</div>
+
+</div>
+<script>
+// ═══════════════════════════
+// DATA (injected by Python)
+// ═══════════════════════════
+const ALL_MONTHS         = /*%%ALL_MONTHS%%*/[];
+const MEMBERS_DATA       = /*%%MEMBERS_DATA%%*/{};
+const TEAMS              = /*%%TEAMS%%*/{};
+const TEAM_UNIQUE_TOTALS = /*%%TEAM_UNIQUE_TOTALS%%*/{};
+
+// ═══════════════════════════
+// CONSTANTS
+// ═══════════════════════════
+const C_MAKER='#06B6D4',C_CHECKER='#885CF6',C_QC='#108981',C_SLA='#F5A623';
+const SAFE_ZERO = v => (isNaN(v)||v==null) ? 0 : v;
+const LINE_COLORS=['#2551E3','#FF3C28','#108981','#F5A623','#885CF6','#8069B4','#4F97316','#14BB86','#84B5F7','#F09466','#0EA5E9','#8AB5F7','#340399','#68A5FA'];
+const METRIC_LABELS={Disbursements:'Disbursements',live:'New Deals',post:'Reviews',amend:'Amendments'};
+const DEFAULT_GRADIENTS=[
+  'linear-gradient(135deg,#2551E3,#8069B4)',
+  'linear-gradient(135deg,#FF3C28,#F5A623)',
+  'linear-gradient(135deg,#108981,#06B6D4)',
+  'linear-gradient(135deg,#885CF6,#2551E3)',
+  'linear-gradient(135deg,#F5A623,#8069B4)',
+  'linear-gradient(135deg,#FF3C28,#8069B4)',
+  'linear-gradient(135deg,#4F9731,#FF3C28)',
+  'linear-gradient(135deg,#14BB86,#2551E3)',
+];
+
+// ═══════════════════════════
+// BOOTSTRAP
+// ═══════════════════════════
+function bootstrapData(){
+  // Ensure TM team exists with all members
+  TEAMS['tm']={name:'ALL', members:Object.values(MEMBERS_DATA)};
+}
+
+// ═══════════════════════════
+// PERIOD FILTER
+// ═══════════════════════════
+let MONTH_OPTS=[];
+let filterMode='year',filterYear='',filterMonth='',filterFrom='',filterTo='';
+
+function buildMonthOpts(){ return ALL_MONTHS.map(label=>({val:label.replace(/\s*\//,'').replace(/\s+/,''),label})); }
+function getAvailableYears(){ return [...new Set(ALL_MONTHS.map(m=>{const x=m.match(/'(\d{2})/);return x?'20'+x[1]:null}).filter(Boolean))]; }
+function monthValToLabel(v){ return (MONTH_OPTS.find(o=>o.val===v)||{label:v}).label; }
+
+function initFilter(){
+  MONTH_OPTS=buildMonthOpts();
+  if(!MONTH_OPTS.length) return;
+  const years=getAvailableYears();
+  filterYear=years[years.length-1]||'2025';
+  filterMonth=MONTH_OPTS[MONTH_OPTS.length-1]?.val||'';
+  filterFrom=MONTH_OPTS[0]?.val||'';
+  filterTo=MONTH_OPTS[MONTH_OPTS.length-1]?.val||'';
+}
+
+function getActiveMonths(){
+  if(filterMode==='year'){ const yr=filterYear.slice(2); return ALL_MONTHS.filter(m=>m.includes("'"+yr)); }
+  if(filterMode==='month'){ const l=monthValToLabel(filterMonth); return ALL_MONTHS.includes(l)?[l]:[];}
+  if(filterMode==='range'){
+    const fi=MONTH_OPTS.findIndex(o=>o.val===filterFrom), ti=MONTH_OPTS.findIndex(o=>o.val===filterTo);
+    const lo=Math.min(fi,ti),hi=Math.max(fi,ti);
+    return MONTH_OPTS.slice(lo,hi+1).map(o=>o.label).filter(l=>ALL_MONTHS.includes(l));
+  }
+  return ALL_MONTHS;
+}
+
+function getPeriodLabel(){
+  if(filterMode==='year') return filterYear;
+  if(filterMode==='month') return monthValToLabel(filterMonth);
+  if(filterMode==='range') return `${monthValToLabel(filterFrom)} → ${monthValToLabel(filterTo)}`;
+  return '';
+}
+
+function renderFilterControls(){
+  const el=document.getElementById('filterControls'); if(!el) return;
+  const years=getAvailableYears();
+  const yOpts=years.map(y=>`<option value="${y}" ${filterYear===y?'selected':''}>${y}</option>`).join('');
+  const mOpts=MONTH_OPTS.map(o=>`<option value="${o.val}" ${filterMonth===o.val?'selected':''}>${o.label}</option>`).join('');
+
+  if(filterMode==='year'){
+    el.innerHTML=`<div class="filter-group"><label>Ano</label><select onchange="filterYear=this.value;applyFilter()">${yOpts}</select></div>`;
+  } else if(filterMode==='month'){
+    el.innerHTML=`<div class="filter-group"><label>Ano</label><select onchange="filterYear=this.value;renderFilterControls();applyFilter()">${yOpts}</select></div><div class="filter-group"><label>Mês</label><select onchange="filterMonth=this.value;applyFilter()">${mOpts}</select></div>`;
+  } else {
+    const fO=MONTH_OPTS.map(o=>`<option value="${o.val}" ${filterFrom===o.val?'selected':''}>${o.label}</option>`).join('');
+    const tO=MONTH_OPTS.map(o=>`<option value="${o.val}" ${filterTo===o.val?'selected':''}>${o.label}</option>`).join('');
+    el.innerHTML=`<div class="filter-group"><label>De</label><select onchange="filterFrom=this.value;applyFilter()">${fO}</select></div><span class="filter-sep">→</span><div class="filter-group"><label>Até</label><select onchange="filterTo=this.value;applyFilter()">${tO}</select></div>`;
+  }
+}
+
+function setMode(mode,btn){
+  filterMode=mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFilterControls();
+  applyFilter();
+}
+
+function applyFilter(){
+  const active=getActiveMonths();
+  document.getElementById('periodLabel').textContent=getPeriodLabel();
+  renderMemberProfile(currentMemberId,active);
+  renderH2H(active);
+  if(window.teamChartsInit){ renderKPIs(active); renderCharts(active,currentRankMetric); renderRanking(currentRankMetric,active); renderSpotlight(active); }
+}
+
+// ═══════════════════════════
+// HELPERS
+// ═══════════════════════════
+function setText(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+function getIdx(active){ return ALL_MONTHS.map((m,i)=>active.includes(m)?i:-1).filter(i=>i>=0); }
+function sumArr(arr,idx){ if(!arr) return 0; return idx.reduce((s,i)=>s+(arr[i]||0),0); }
+function avgArr(arr,idx){
+  if(!arr||!idx.length) return '–';
+  const vals=idx.map(i=>arr[i]).filter(v=>v&&v>0);
+  return vals.length?(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1):'–';
+}
+function fmtQC(v){ return (v&&v!='0'&&v!='0.0')?v:'–'; }
+function fmtSLA(v){ return (v&&v!='0'&&v!='0.00'&&v!='0.0')?(v=='–'?'–':v+'d'):'–'; }
+function safeNum(v){ const n=Number(v); return (!isNaN(n)&&n>=0)?n:0; }
+
+// ═══════════════════════════
+// CALC MEMBER TOTALS
+// ═══════════════════════════
+function calcMemberTotals(m, active){
+  const idx=getIdx(active);
+  // Disbursements
+  const mRows=(m.Disbursements.makerRows  ||[]).filter(r=>active.includes(r.m));
+  const cRows=(m.Disbursements.checkerRows||[]).filter(r=>active.includes(r.m));
+  const uMakerUbt   =safeNum(mRows.reduce((s,r)=>s+safeNum(r.cnt),   0));
+  const uMakerParent=safeNum(mRows.reduce((s,r)=>s+safeNum(r.parent),0));
+  const uChkUbt     =safeNum(cRows.reduce((s,r)=>s+safeNum(r.cnt),   0));
+  const uChkParent  =safeNum(cRows.reduce((s,r)=>s+safeNum(r.parent),0));
+  const uTotalReal  =uMakerUbt+uMakerParent+uChkUbt+uChkParent;
+  const slaVals=mRows.map(r=>parseFloat(r.sla)).filter(v=>isNaN(v)===false&&v>0);
+  const avgSla=slaVals.length?(slaVals.reduce((s,v)=>s+v,0)/slaVals.length).toFixed(2):'–';
+  const qcVals=cRows.map(r=>r.qc).filter(v=>v&&v>0);
+  const avgQc=qcVals.length?parseFloat((qcVals.reduce((s,v)=>s+v,0)/qcVals.length).toFixed(1)):0;
+
+  function calcKey(key){
+    const mk=safeNum(sumArr(m[key]?.makerCounts,  idx));
+    const ck=safeNum(sumArr(m[key]?.checkerCounts,idx));
+    const allQC=[...idx.map(i=>m[key]?.makerQC?.[i]),  ...idx.map(i=>m[key]?.checkerQC?.[i])].filter(v=>v&&v>0);
+    const qc=allQC.length?parseFloat((allQC.reduce((s,v)=>s+v,0)/allQC.length).toFixed(1)):0;
+    return {total:mk+ck,maker:mk,checker:ck,qc};
+  }
+
+  return {
+    Disbursements:{total:uTotalReal,makerUbt:uMakerUbt,makerParent:uMakerParent,checkerUbt:uChkUbt,checkerParent:uChkParent,
+      maker:uMakerUbt+uMakerParent,checker:uChkUbt+uChkParent,qc:avgQc,sla:avgSla},
+    live:calcKey('live'), post:calcKey('post'), amend:calcKey('amend'),
+  };
+}
+
+// ═══════════════════════════
+// RADAR
+// ═══════════════════════════
+function calcRadarScores(memberId,active){
+  const m=MEMBERS_DATA[memberId]; if(!m) return [0,0,0,0];
+  const totals=calcMemberTotals(m,active);
+  const allTMs=Object.values(MEMBERS_DATA);
+  function maxMetric(key){ return Math.max(1,...allTMs.map(tm=>{ const t=calcMemberTotals(tm,active); return safeNum(t[key]?.total); })); }
+  return [
+    Math.round((safeNum(totals.Disbursements.total) /maxMetric('Disbursements')) *100),
+    Math.round((safeNum(totals.live.total) /maxMetric('live')) *100),
+    Math.round((safeNum(totals.post.total) /maxMetric('post')) *100),
+    Math.round((safeNum(totals.amend.total)/maxMetric('amend'))*100),
+  ];
+}
+
+// ═══════════════════════════
+// BUILD SELECTS & TOGGLES
+// ═══════════════════════════
+function buildMemberSelects(){
+  const teamGroups={};
+  Object.values(MEMBERS_DATA).forEach(m=>{ if(!teamGroups[m.team]) teamGroups[m.team]=[]; teamGroups[m.team].push(m); });
+  let html='';
+  Object.keys(teamGroups).sort().forEach(team=>{
+    html+=`<optgroup label="— ${team} —">`;
+    teamGroups[team].forEach(m=>{ html+=`<option value="${m.id}">${m.name}</option>`; });
+    html+=`</optgroup>`;
+  });
+  ['member-select','h2h-select1','h2h-select2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; });
+  const allIds=Object.keys(MEMBERS_DATA);
+  if(allIds.length>=2) document.getElementById('h2h-select2').value=allIds[1];
+}
+
+function buildTeamToggle(){
+  const realKeys=Object.keys(TEAMS).filter(k=>k!=='tm');
+  const orderedKeys=[...realKeys,'tm'];
+  const toggle=document.getElementById('teamToggle');
+  toggle.innerHTML=orderedKeys.map((k,i)=>`<button class="team-toggle-btn ${i===0?'active':''}" onclick="switchTeam('${k}',this)">${TEAMS[k].name}</button>`).join('');
+  if(orderedKeys.length>0) currentTeam=orderedKeys[0];
+}
+
+// ═══════════════════════════
+// MEMBER PROFILE
+// ═══════════════════════════
+let currentMemberId='', radarMemberChart=null;
+function switchMember(id){ currentMemberId=id; renderMemberProfile(id,getActiveMonths()); }
+
+function renderMemberProfile(id,active){
+  const m=MEMBERS_DATA[id]; if(!m) return;
+  const idx=getIdx(active);
+  const totals=calcMemberTotals(m,active);
+  const u=totals.Disbursements;
+
+  document.getElementById('member-avatar').textContent=m.initials;
+  document.getElementById('member-avatar').style.background=m.gradient;
+  setText('member-name',m.name);
+  setText('member-sub',`${m.team} · ${m.role}`);
+  document.getElementById('member-select').value=id;
+
+  // Pills
+  setText('pill-Disbursements-total',u.total);
+  setText('pill-Disbursements-m',u.maker);
+  setText('pill-Disbursements-c',u.checker);
+  setText('pill-sla',fmtSLA(u.sla));
+  setText('pill-Disbursements-qc',fmtQC(u.qc));
+  setText('pill-live-total',totals.live.total); setText('pill-live-m',totals.live.maker); setText('pill-live-c',totals.live.checker); setText('pill-live-qc',fmtQC(totals.live.qc));
+  setText('pill-post-total',totals.post.total); setText('pill-post-m',totals.post.maker); setText('pill-post-c',totals.post.checker); setText('pill-post-qc',fmtQC(totals.post.qc));
+  setText('pill-amend-total',totals.amend.total); setText('pill-amend-m',totals.amend.maker); setText('pill-amend-c',totals.amend.checker); setText('pill-amend-qc',fmtQC(totals.amend.qc));
+
+  // Badges
+  setText('badge-Disbursements',`${u.total} Deal Slips`);
+  setText('badge-live',`${totals.live.total} Deal Slips`);
+  setText('badge-post',`${totals.post.total} Deal Slips`);
+  setText('badge-amend',`${totals.amend.total} Deal Slips`);
+
+  // Breakdown Disbursements
+  setText('bd-Disbursements-total',u.total); setText('bd-Disbursements-ubt',u.makerUbt+u.checkerUbt); setText('bd-Disbursements-par',u.makerParent+u.checkerParent);
+  setText('bd-Disbursements-maker',u.maker); setText('bd-Disbursements-maker-ubt',u.makerUbt); setText('bd-Disbursements-maker-par',u.makerParent);
+  setText('bd-Disbursements-checker',u.checker); setText('bd-Disbursements-checker-ubt',u.checkerUbt); setText('bd-Disbursements-checker-par',u.checkerParent);
+  setText('bd-live-total',totals.live.total); setText('bd-live-maker',totals.live.maker); setText('bd-live-checker',totals.live.checker);
+  setText('bd-post-total',totals.post.total); setText('bd-post-maker',totals.post.maker); setText('bd-post-checker',totals.post.checker);
+  setText('bd-amend-total',totals.amend.total); setText('bd-amend-maker',totals.amend.maker); setText('bd-amend-checker',totals.amend.checker);
+
+  // Monthly tables Disbursements
+  const mRows=(m.Disbursements.makerRows  ||[]).filter(r=>active.includes(r.m));
+  const cRows=(m.Disbursements.checkerRows||[]).filter(r=>active.includes(r.m));
+  document.getElementById('tbl-maker-Disbursements-body').innerHTML=
+    active.map(mo=>{ const r=mRows.find(x=>x.m===mo)||{}; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${safeNum(r.cnt)}</td><td class="num-amber" style="text-align:right;">${fmtSLA(r.sla)}</td><td class="num-purple" style="text-align:right;">${safeNum(r.parent)}</td></tr>`; }).join('')+
+    `<tr class="total-row"><td>Total</td><td class="num-blue" style="text-align:right;">${u.makerUbt}</td><td class="num-amber" style="text-align:right;">${fmtSLA(u.sla)}</td><td class="num-purple" style="text-align:right;">${u.makerParent}</td></tr>`;
+  document.getElementById('tbl-checker-Disbursements-body').innerHTML=
+    active.map(mo=>{ const r=cRows.find(x=>x.m===mo)||{}; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${safeNum(r.cnt)}</td><td class="mm-accent" style="text-align:right;">${fmtQC(r.qc)}</td><td class="num-purple" style="text-align:right;">${safeNum(r.parent)}</td></tr>`; }).join('')+
+    `<tr class="total-row"><td>Total</td><td class="num-blue" style="text-align:right;">${u.checkerUbt}</td><td class="mm-accent" style="text-align:right;">${fmtQC(u.qc)}</td><td class="num-purple" style="text-align:right;">${u.checkerParent}</td></tr>`;
+
+  // Monthly tables Live/Post/Amend
+  ['live','post','amend'].forEach(key=>{
+    ['maker','checker'].forEach(role=>{
+      const tbId=`tbl-${role}-${key}-body`, tb=document.getElementById(tbId); if(!tb) return;
+      const counts=m[key]?.[role+'Counts']||[], qcs=m[key]?.[role+'QC']||[];
+      tb.innerHTML=active.map((mo,_i)=>{
+        const i=ALL_MONTHS.indexOf(mo);
+        const cnt=i>=0?safeNum(counts[i]):0, qc=i>=0?fmtQC(qcs[i]):'–';
+        return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${cnt}</td><td class="mm-accent" style="text-align:right;">${qc}</td></tr>`;
+      }).join('');
+    });
+  });
+
+  // Radar
+  const scores=calcRadarScores(id,active);
+  const allScores=Object.keys(MEMBERS_DATA).map(mid=>calcRadarScores(mid,active));
+  const avg=[0,1,2,3].map(i=>Math.round(allScores.reduce((s,a)=>s+a[i],0)/allScores.length));
+  if(radarMemberChart) radarMemberChart.destroy();
+  radarMemberChart=new Chart(document.getElementById('radarMember'),{
+    type:'radar',
+    data:{labels:['Disbursements','New Deals','Reviews','Amendments'],datasets:[
+      {data:avg,borderColor:'rgba(37,81,227,0.5)',backgroundColor:'rgba(37,81,227,0.08)',pointBackgroundColor:'rgba(37,81,227,0.7)',borderDash:[4,4],pointRadius:3,borderWidth:1.5},
+      {data:scores,borderColor:m.gradient?.includes('#2551E3')?'#2551E3':'#885CF6',backgroundColor:'rgba(37,81,227,0.12)',pointBackgroundColor:'#2551E3',pointRadius:3,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'rgba(37,81,227,0.2)'},angleLines:{color:'rgba(37,81,227,0.2)'},pointLabels:{color:'#7A8BB8',font:{size:10,family:'Inter'}}}},
+      plugins:{legend:{display:false}}}
+  });
+}
+
+// ═══════════════════════════
+// HEAD TO HEAD
+// ═══════════════════════════
+let radarH2HChart=null;
+function switchH2H(){ renderH2H(getActiveMonths()); }
+
+function renderH2H(active){
+  const id1=document.getElementById('h2h-select1').value, id2=document.getElementById('h2h-select2').value;
+  const m1=MEMBERS_DATA[id1], m2=MEMBERS_DATA[id2]; if(!m1||!m2) return;
+  const idx=getIdx(active);
+  const t1=calcMemberTotals(m1,active), t2=calcMemberTotals(m2,active);
+
+  document.getElementById('h2h-avatar1').textContent=m1.initials; document.getElementById('h2h-avatar1').style.background=m1.gradient;
+  setText('h2h-name1',m1.name); setText('h2h-sub1',`${m1.team} · ${m1.role}`);
+  document.getElementById('h2h-avatar2').textContent=m2.initials; document.getElementById('h2h-avatar2').style.background=m2.gradient;
+  setText('h2h-name2',m2.name); setText('h2h-sub2',`${m2.team} · ${m2.role}`);
+  document.getElementById('h2h-legend1').textContent=m1.name.split(' ')[0];
+  document.getElementById('h2h-legend2').textContent=m2.name.split(' ')[0];
+
+  function winBadge(side){ return `<span style="display:inline-block;font-size:0.55rem;padding:1px 5px;border-radius:3px;margin-left:5px;font-weight:700;background:${side==='tm1'?'rgba(37,81,227,0.2)':'rgba(255,60,40,0.15)'};color:${side==='tm1'?'#7a9fff':'#ff7766'};border:1px solid ${side==='tm1'?'rgba(37,81,227,0.4)':'rgba(255,60,40,0.3)'};">▲</span>`; }
+  function summaryRow(label,dotColor,key,showSLA){
+    const v1=safeNum(t1[key]?.total), v2=safeNum(t2[key]?.total);
+    const qc1=fmtQC(t1[key]?.qc), qc2=fmtQC(t2[key]?.qc);
+    const w=v1>v2?'tm1':v2>v1?'tm2':'tie';
+    const slaRow=showSLA?`<div style="font-size:0.6rem;color:var(--muted);margin-top:3px;">SLA: <span style="color:${C_SLA};font-weight:600;">${fmtSLA(t1.Disbursements.sla)}</span> vs <span style="color:${C_SLA};font-weight:600;">${fmtSLA(t2.Disbursements.sla)}</span></div>`:'';
+    const v1style=w==='tm1'?`color:var(--tm1);font-size:1rem;font-weight:800;`:`color:var(--muted2);font-size:0.9rem;font-weight:600;`;
+    const v2style=w==='tm2'?`color:var(--tm2);font-size:1rem;font-weight:800;`:`color:var(--muted2);font-size:0.9rem;font-weight:600;`;
+    return `<tr style="border-bottom:1px solid rgba(30,45,90,0.5);">
+      <td style="padding:10px 12px;">
+        <div style="display:flex;align-items:center;gap:6px;font-family:'Inter',sans-serif;font-size:0.72rem;font-weight:600;">
+          <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>${label}
+        </div>${slaRow}
+      </td>
+      <td style="padding:10px 12px;text-align:right;">
+        <span style="font-family:var(--num-font);${v1style}">${v1}${w==='tm1'?winBadge('tm1'):''}</span>
+      </td>
+      <td style="padding:10px 12px;text-align:center;color:var(--muted2);font-size:0.72rem;">${safeNum(t1[key]?.maker)}/${safeNum(t1[key]?.checker)}</td>
+      <td style="padding:10px 12px;text-align:center;">
+        <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:${C_QC};">${qc1}</span>
+      </td>
+      <td style="width:1px;padding:0;background:var(--border);"></td>
+      <td style="padding:10px 12px;text-align:center;">
+        <span style="font-family:var(--num-font);font-size:0.82rem;font-weight:600;color:${C_QC};">${qc2}</span>
+      </td>
+      <td style="padding:10px 12px;text-align:center;color:var(--muted2);font-size:0.72rem;">${safeNum(t2[key]?.maker)}/${safeNum(t2[key]?.checker)}</td>
+      <td style="padding:10px 12px;text-align:right;">
+        <span style="font-family:var(--num-font);${v2style}">${v2}${w==='tm2'?winBadge('tm2'):''}</span>
+      </td>
+    </tr>`;
+  }
+  const n1upper=m1.name.toUpperCase(), n2upper=m2.name.toUpperCase();
+  document.getElementById('h2h-summary-table').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="padding:8px 12px;text-align:left;font-size:0.56rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--muted);font-weight:500;">Metric</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--tm1);font-weight:600;">${n1upper}</th>
+          <th style="padding:8px 12px;text-align:center;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:500;">M / C</th>
+          <th style="padding:8px 12px;text-align:center;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:500;">QC Score</th>
+          <th style="width:1px;padding:0;background:var(--border);"></th>
+          <th style="padding:8px 12px;text-align:center;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:500;">QC Score</th>
+          <th style="padding:8px 12px;text-align:center;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:500;">M / C</th>
+          <th style="padding:8px 12px;text-align:right;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--tm2);font-weight:600;">${n2upper}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summaryRow('Disbursements',       C_QC,   'Disbursements', true)}
+        ${summaryRow('New Deals', C_MAKER, 'live', false)}
+        ${summaryRow('Reviews',C_CHECKER,'post',false)}
+        ${summaryRow('Amendments', C_SLA,  'amend',false)}
+      </tbody>
+    </table>`;
+
+  // Radar H2H
+  const s1=calcRadarScores(id1,active), s2=calcRadarScores(id2,active);
+  if(radarH2HChart) radarH2HChart.destroy();
+  radarH2HChart=new Chart(document.getElementById('radarH2H'),{
+    type:'radar',
+    data:{labels:['Disbursements','New Deals','Reviews','Amendments'],datasets:[
+      {label:m1.name.split(' ')[0],data:s1,borderColor:'#2551E3',backgroundColor:'rgba(37,81,227,0.12)',pointBackgroundColor:'#2551E3',borderWidth:2,pointRadius:3},
+      {label:m2.name.split(' ')[0],data:s2,borderColor:'#FF3C28',backgroundColor:'rgba(255,60,40,0.08)',pointBackgroundColor:'#FF3C28',borderWidth:2,pointRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'rgba(37,81,227,0.2)'},angleLines:{color:'rgba(37,81,227,0.2)'},pointLabels:{color:'#7A8BB8',font:{size:10,family:'Inter'}}}},
+      plugins:{legend:{display:false}}}
+  });
+
+  // Monthly H2H panels
+  const mRows1=(m1.Disbursements.makerRows||[]).filter(r=>active.includes(r.m));
+  const cRows1=(m1.Disbursements.checkerRows||[]).filter(r=>active.includes(r.m));
+  const mRows2=(m2.Disbursements.makerRows||[]).filter(r=>active.includes(r.m));
+  const cRows2=(m2.Disbursements.checkerRows||[]).filter(r=>active.includes(r.m));
+  document.getElementById('h2h-Disbursements').innerHTML=`
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-tm1"></span>${m1.name} — Disbursements</div></div>
+      <table class="monthly-table"><thead><tr><th>Month</th><th style="text-align:right;">UBT Count</th><th style="text-align:right;">Avg SLA</th><th style="text-align:right;">Parent</th></tr></thead><tbody>
+      ${active.map(mo=>{ const r=mRows1.find(x=>x.m===mo)||{}; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${safeNum(r.cnt)}</td><td class="num-amber" style="text-align:right;">${fmtSLA(r.sla)}</td><td class="num-purple" style="text-align:right;">${safeNum(r.parent)}</td></tr>`; }).join('')}
+      </tbody></table></div></div>
+    <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-tm2"></span>${m2.name} — Disbursements</div></div>
+      <table class="monthly-table"><thead><tr><th>Month</th><th style="text-align:right;">UBT Count</th><th style="text-align:right;">Avg SLA</th><th style="text-align:right;">Parent</th></tr></thead><tbody>
+      ${active.map(mo=>{ const r=mRows2.find(x=>x.m===mo)||{}; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${safeNum(r.cnt)}</td><td class="num-amber" style="text-align:right;">${fmtSLA(r.sla)}</td><td class="num-purple" style="text-align:right;">${safeNum(r.parent)}</td></tr>`; }).join('')}
+      </tbody></table></div></div>`;
+
+  ['live','post','amend'].forEach(key=>{
+    const label={'live':'New Deals','post':'Reviews','amend':'Amendments'}[key];
+    document.getElementById('h2h-'+key).innerHTML=`
+      <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-tm1"></span>${m1.name} — ${label}</div></div>
+        <table class="monthly-table"><thead><tr><th>Month</th><th style="text-align:right;">Count</th><th style="text-align:right;">Avg QC</th></tr></thead><tbody>
+        ${active.map((mo,_i)=>{ const i=ALL_MONTHS.indexOf(mo); const cnt=i>=0?safeNum((m1[key]?.makerCounts||[])[i]+((m1[key]?.checkerCounts||[])[i]||0)):0; const allQC=[...(m1[key]?.makerQC||[]).slice(i,i+1),...(m1[key]?.checkerQC||[]).slice(i,i+1)].filter(v=>v&&v>0); const qc=allQC.length?(allQC.reduce((s,v)=>s+v,0)/allQC.length).toFixed(1):'–'; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${cnt}</td><td class="mm-accent" style="text-align:right;">${fmtQC(qc)}</td></tr>`; }).join('')}
+        </tbody></table></div></div>
+      <div class="col"><div class="card"><div class="card-head"><div class="card-title"><span class="cdot cdot-tm2"></span>${m2.name} — ${label}</div></div>
+        <table class="monthly-table"><thead><tr><th>Month</th><th style="text-align:right;">Count</th><th style="text-align:right;">Avg QC</th></tr></thead><tbody>
+        ${active.map((mo,_i)=>{ const i=ALL_MONTHS.indexOf(mo); const cnt=i>=0?safeNum((m2[key]?.makerCounts||[])[i]+((m2[key]?.checkerCounts||[])[i]||0)):0; const allQC=[...(m2[key]?.makerQC||[]).slice(i,i+1),...(m2[key]?.checkerQC||[]).slice(i,i+1)].filter(v=>v&&v>0); const qc=allQC.length?(allQC.reduce((s,v)=>s+v,0)/allQC.length).toFixed(1):'–'; return `<tr><td>${mo}</td><td class="num-blue" style="text-align:right;">${cnt}</td><td class="mm-accent" style="text-align:right;">${fmtQC(qc)}</td></tr>`; }).join('')}
+        </tbody></table></div></div>`;
+  });
+}
+
+function showH2HMetric(key,btn){
+  ['Disbursements','live','post','amend'].forEach(k=>{ const el=document.getElementById('h2h-'+k); if(el) el.style.display=k===key?'flex':'none'; });
+  document.querySelectorAll('#page-h2h .metric-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════
+// TEAM OVERVIEW
+// ═══════════════════════════
+let currentTeam='',currentRankMetric='Disbursements',barChart=null,lineChart=null;
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.page').forEach(p=>{ p.classList.remove('active'); p.innerHTML===''&&(p.style.display='none'); });
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(tab==='team'&&window.teamChartsInit) initTeamOverview();
+}
+
+function switchTeam(key,btn){
+  currentTeam=key;
+  document.querySelectorAll('.team-toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const name=TEAMS[key]?.name||key;
+  setText('teamOverviewTitle',key==='tm'?'ALL — All Teams Overview':`${name} — Overview`);
+  const active=getActiveMonths();
+  renderKPIs(active); renderCharts(active,currentRankMetric); renderRanking(currentRankMetric,active); renderSpotlight(active);
+}
+
+function getTeamMembers(){
+  return (TEAMS[currentTeam]?.members||[]);
+}
+
+function getTeamMembersWithTotals(active){
+  return getTeamMembers().map(m=>({m,totals:calcMemberTotals(m,active)}));
+}
+
+function renderKPIs(active){
+  const members=getTeamMembersWithTotals(active);
+  const sum=(key,sub)=>members.reduce((s,{totals})=>s+safeNum(totals[key]?.[sub]),0);
+  const avgQ=(key)=>{ const vals=members.map(({totals})=>totals[key]?.qc).filter(v=>v&&v>0); return vals.length?(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(1):'–'; };
+  const avgS=()=>{ const vals=members.map(({totals})=>totals.Disbursements?.sla).filter(v=>v&&v!=='–'); return vals.length?(vals.reduce((s,v)=>s+parseFloat(v),0)/vals.length).toFixed(2)+'d':'–'; };
+
+  document.getElementById('kpiStrip').innerHTML=[
+    {label:'TOTAL Disbursements',   val:sum('Disbursements','total'),  color:'var(--color-volume)', sub:`Avg QC <b style="color:${C_QC}">${avgQ('Disbursements')}</b> | Avg SLA <b style="color:${C_SLA}">${avgS()}</b>`},
+    {label:'New Deals',val:sum('live','total'),   color:'var(--color-maker)',  sub:`Avg QC <b style="color:${C_QC}">${avgQ('live')}</b>`},
+    {label:'Reviews',  val:sum('post','total'),   color:'var(--color-checker)',sub:`Avg QC <b style="color:${C_QC}">${avgQ('post')}</b>`},
+    {label:'AMENDMENTS',   val:sum('amend','total'),  color:'var(--color-sla)',    sub:`Avg QC <b style="color:${C_QC}">${avgQ('amend')}</b>`},
+  ].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div>
+    <div style="font-family:var(--num-font);font-size:1.9rem;font-weight:800;color:${k.color};line-height:1;margin-bottom:8px;">${k.val}</div>
+    <div class="kpi-stats-row"><div style="font-size:0.62rem;color:var(--muted2);">${k.sub}</div></div></div>`).join('');
+}
+
+function renderCharts(active,metricKey){
+  const members=getTeamMembersWithTotals(active);
+  const label=METRIC_LABELS[metricKey]||metricKey;
+  setText('chartBarTitle',`${label} por Membro`);
+  setText('chartLineTitle',`Evolução Mensal — ${label}`);
+  setText('chartLineSub',TEAMS[currentTeam]?.name||'');
+
+  if(barChart) barChart.destroy();
+  barChart=new Chart(document.getElementById('chartTeamBar'),{type:'bar',
+    data:{labels:members.map(({m})=>m.name.split(' ')[0]),datasets:[
+      {label:'Maker',  data:members.map(({totals})=>safeNum(totals[metricKey]?.maker)),  backgroundColor:'rgba(6,182,212,0.6)',borderColor:'#06B6D4',borderWidth:1,borderRadius:3},
+      {label:'Checker',data:members.map(({totals})=>safeNum(totals[metricKey]?.checker)),backgroundColor:'rgba(136,92,246,0.6)',borderColor:'#885CF6',borderWidth:1,borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+      plugins:{legend:{labels:{color:'#7A8BB8',font:{size:10}}}},
+      scales:{x:{ticks:{color:'#7A8BB8',font:{size:9}},grid:{color:'rgba(30,45,90,0.4)'}},y:{ticks:{color:'#7A8BB8',font:{size:9}},grid:{color:'rgba(30,45,90,0.4)'}}}}
+  });
+
+  if(lineChart) lineChart.destroy();
+  lineChart=new Chart(document.getElementById('chartTeamLine'),{type:'line',
+    data:{labels:active,datasets:members.map(({m},i)=>{
+      const mRows=metricKey==='Disbursements'?(m.Disbursements.makerRows||[]):[];
+      const cCounts=m[metricKey]?.makerCounts||[];
+      const data=active.map((mo,_)=>{
+        if(metricKey==='Disbursements'){ const r=mRows.find(x=>x.m===mo)||{}; return safeNum(r.cnt)+safeNum(r.parent); }
+        const idx2=ALL_MONTHS.indexOf(mo); return idx2>=0?safeNum(cCounts[idx2]):0;
+      });
+      return{label:m.name.split(' ')[0],data,borderColor:LINE_COLORS[i%LINE_COLORS.length],backgroundColor:'transparent',pointBackgroundColor:LINE_COLORS[i%LINE_COLORS.length],borderWidth:1.5,pointRadius:2.5,tension:0.4};
+    })},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+      plugins:{legend:{labels:{color:'#7A8BB8',font:{size:9},boxWidth:8}}},
+      scales:{x:{ticks:{color:'#7A8BB8',font:{size:9}},grid:{color:'rgba(30,45,90,0.35)'}},y:{ticks:{color:'#7A8BB8',font:{size:9}},grid:{color:'rgba(30,45,90,0.35)'}}}}
+  });
+}
+
+function switchRankMetric(key,btn){
+  currentRankMetric=key;
+  document.querySelectorAll('.team-metric-tabs .metric-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  setText('rankingTitle',`Ranking — ${METRIC_LABELS[key]||key}`);
+  const active=getActiveMonths();
+  renderRanking(key,active);
+  renderCharts(active,key);
+}
+
+function renderRanking(metricKey,active){
+  const members=getTeamMembersWithTotals(active);
+  const sorted=[...members].sort((a,b)=>safeNum(b.totals[metricKey]?.total)-safeNum(a.totals[metricKey]?.total));
+  const maxT=safeNum(sorted[0]?.totals[metricKey]?.total)||1;
+  const showSla=metricKey==='Disbursements';
+  document.getElementById('rankingBody').innerHTML=sorted.map(({m,totals},i)=>{
+    const t=totals[metricKey]||{};
+    const qcV=safeNum(t.qc); const qcCls=qcV>=99?'score-high':qcV>=97?'score-mid':qcV>0?'score-low':'';
+    const pct=Math.round((safeNum(t.total)/maxT)*100);
+    const rc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    return`<tr>
+      <td><span class="rank-num ${rc}">${i+1}</span></td>
+      <td><div style="display:flex;align-items:center;gap:10px;"><div class="rank-starter" style="background:${m.gradient};">${m.initials}</div><div><div class="rank-name">${m.name}</div><div class="rank-role">${m.role}</div></div></div></td>
+      <td style="text-align:right;font-family:var(--num-font);font-weight:700;font-size:0.9rem;">${safeNum(t.total)}</td>
+      <td style="text-align:right;"><span style="color:${C_MAKER};font-family:var(--num-font);font-size:0.8rem;">${safeNum(t.maker)}</span></td>
+      <td style="text-align:right;"><span style="color:${C_CHECKER};font-family:var(--num-font);font-size:0.8rem;">${safeNum(t.checker)}</span></td>
+      <td style="text-align:right;">${qcCls?`<span class="${qcCls}" style="display:inline-block;font-family:var(--num-font);font-size:0.72rem;padding:2px 8px;border-radius:12px;">${qcV||'–'}</span>`:'<span style="color:var(--muted);">–</span>'}</td>
+      <td style="text-align:right;font-family:var(--num-font);font-size:0.78rem;color:${C_SLA};">${showSla?fmtSLA(totals.Disbursements?.sla):'—'}</td>
+      <td><div class="rank-mini"><div class="rank-mini-fill" style="width:${pct}%;background:linear-gradient(90deg,${C_MAKER},${C_CHECKER});"></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSpotlight(active){
+  const members=getTeamMembersWithTotals(active);
+  setText('spotlightBadge',`${members.length} membros`);
+  const delays=['d1','d2','d3','d4','d5','d6'];
+  document.getElementById('spotlightGrid').innerHTML=members.map(({m,totals},i)=>{
+    const allQC=[totals.Disbursements?.qc,totals.live?.qc,totals.post?.qc,totals.amend?.qc].filter(v=>v&&v>0);
+    const avgQC=allQC.length?(allQC.reduce((s,v)=>s+v,0)/allQC.length).toFixed(1):'–';
+    return`<div class="spotlight-card ${delays[i%delays.length]}">
+      <div class="spotlight-top"><div class="avatar" style="background:${m.gradient};width:34px;height:34px;font-size:0.72rem;">${m.initials}</div>
+        <div><div class="spotlight-name">${m.name}</div><div class="spotlight-role">${m.role}</div></div></div>
+      <div class="spotlight-metrics">
+        <div class="spotlight-metric"><div class="spotlight-metric-label">Disbursements</div><div class="spotlight-metric-val" style="color:var(--color-volume);">${safeNum(totals.Disbursements?.total)}</div></div>
+        <div class="spotlight-metric"><div class="spotlight-metric-label">New Deals</div><div class="spotlight-metric-val" style="color:${C_MAKER};">${safeNum(totals.live?.total)}</div></div>
+        <div class="spotlight-metric"><div class="spotlight-metric-label">Reviews</div><div class="spotlight-metric-val" style="color:${C_CHECKER};">${safeNum(totals.post?.total)}</div></div>
+        <div class="spotlight-metric"><div class="spotlight-metric-label">Amendments</div><div class="spotlight-metric-val" style="color:${C_SLA};">${safeNum(totals.amend?.total)}</div></div>
+      </div>
+      <div class="spotlight-qc"><div class="spotlight-qc-label">Avg QC Score</div>
+        <div class="spotlight-qc-val" style="color:${C_QC};">${avgQC} / 100</div></div>
+    </div>`;
+  }).join('');
+}
+
+function initTeamOverview(){
+  const active=getActiveMonths();
+  renderKPIs(active); renderCharts(active,currentRankMetric); renderRanking(currentRankMetric,active); renderSpotlight(active);
+}
+window.teamChartsInit=true;
+
+// ═══════════════════════════
+// SAMPLE DATA BOOTSTRAP
+// ═══════════════════════════
+
+
+// ═══════════════════════════
+// INIT
+// ═══════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!ALL_MONTHS.length || !Object.keys(MEMBERS_DATA).length) return;
+  bootstrapData();
+  initFilter();
+  buildMemberSelects();
+  buildTeamToggle();
+  renderFilterControls();
+  const firstId=Object.keys(MEMBERS_DATA)[0];
+  if(!firstId) return;
+  currentMemberId=firstId;
+  const active=getActiveMonths();
+  document.getElementById('periodLabel').textContent=getPeriodLabel();
+  renderMemberProfile(firstId,active);
+  renderH2H(active);
+});
+</script>
+</body>
+</html>
